@@ -165,7 +165,7 @@
         const SLOTS = 50;
         const roster = Array(SLOTS).fill(null);
         const debug = document.getElementById('debug');
-        const API_URL = 'https://community-roster-builder.onrender.com/characters';
+        const API_URL = 'https://community-roster-builder.onrender.com';
 
         function initializeRoster() {
             const grid = document.getElementById('rosterGrid');
@@ -327,6 +327,8 @@
         let currentPage = 0;
 
         function updatePagination() {
+            console.log("Current roster state:", roster);
+            
             const totalPages = Math.ceil((roster.filter(slot => slot !== null).length + 1) / SLOTS_PER_PAGE);
             const startIdx = currentPage * SLOTS_PER_PAGE;
             const endIdx = startIdx + SLOTS_PER_PAGE;
