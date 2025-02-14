@@ -357,6 +357,7 @@
         function updateAllSlots() {
             console.log("Forcing full roster UI update...");
             for (let i = 0; i < SLOTS; i++) {
+                console.log(`Slot ${i}:`, roster[i]); // Debugging: See if roster has characters
                 updateSlot(i);
             }
         }
