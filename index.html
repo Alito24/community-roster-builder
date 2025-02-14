@@ -355,19 +355,27 @@
         }
 
         async function loadRoster() {
-            try {
-                const response = await fetch(`${API_URL}/characters`);
-                const characters = await response.json();
-                roster = Array(SLOTS).fill(null);
-                characters.forEach((char, index) => {
-                    if (index < SLOTS) roster[index] = char;
-                });
-                updatePagination();
-            } catch (error) {
-                console.error('Error loading roster:', error);
-            }
+    try {
+        console.log("Fetching characters from API...");
+        const response = await fetch(`${API_URL}/characters`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
 
+        const characters = await response.json();
+        console.log("Received characters:", characters);
+
+        // Merge existing roster with new characters
+        characters.forEach((char, index) => {
+            if (!roster[index]) roster[index] = char;
+        });
+
+        updatePagination();
+    } catch (error) {
+        console.error('Error loading roster:', error);
+    }
+}
         // Initialize on page load
         initializeRoster();
         loadRoster();
