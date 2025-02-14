@@ -354,7 +354,14 @@
             localStorage.setItem('ucnRoster', JSON.stringify(roster));
         }
 
-        async function loadRoster() {
+        function updateAllSlots() {
+            console.log("Forcing full roster UI update...");
+            for (let i = 0; i < SLOTS; i++) {
+                updateSlot(i);
+            }
+        }
+
+       async function loadRoster() {
     try {
         console.log("Fetching characters from API...");
         const response = await fetch(`${API_URL}/characters`);
@@ -366,12 +373,22 @@
         const characters = await response.json();
         console.log("Received characters:", characters);
 
-        // Merge existing roster with new characters
+        // Reset roster to ensure it's fresh
+        roster.length = SLOTS;
+        roster.fill(null);
+
+        // Place characters in roster array
         characters.forEach((char, index) => {
-            if (!roster[index]) roster[index] = char;
+            if (index < SLOTS) {
+                roster[index] = char;
+            }
         });
 
+        console.log("Updated roster:", roster);
+
+        // Update UI
         updatePagination();
+        updateAllSlots();
     } catch (error) {
         console.error('Error loading roster:', error);
     }
