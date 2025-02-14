@@ -273,27 +273,29 @@
 }
 
         function updateSlot(index) {
-            const slot = document.querySelector(`[data-index="${index}"]`);
-            updateDebug(`Updating slot ${index}`);
-            
-            if (roster[index]) {
-                const character = roster[index];
-                const tooltipId = `tooltip-${index}`;
-                slot.innerHTML = `
-                    <img 
-                        src="${character.imageUrl}" 
-                        alt="${character.name}"
-                    >
-                    <div class="tooltip" id="${tooltipId}">
-                        <strong>${character.name}:</strong> ${character.description}
-                    </div>
-                `;
-                updateDebug(`Slot ${index} updated with character ${character.name}`);
-            } else {
-                slot.innerHTML = '';
-                updateDebug(`Slot ${index} cleared`);
-            }
-        }
+    console.log(`Updating slot ${index}`);
+
+    const slot = document.querySelector(`[data-index="${index}"]`);
+
+    if (!slot) {
+        console.warn(`No slot found for index ${index}, skipping update.`);
+        return; // Prevents the error
+    }
+
+    if (roster[index]) {
+        const character = roster[index];
+        slot.innerHTML = `
+            <img src="${character.imageUrl}" alt="${character.name}">
+            <div class="tooltip">
+                <strong>${character.name}:</strong> ${character.description}
+            </div>
+        `;
+        console.log(`Slot ${index} updated with ${character.name}`);
+    } else {
+        slot.innerHTML = ''; // If slot is empty, clear it
+    }
+}
+
 
         function updatePreview() {
             const name = document.getElementById('characterName').value;
@@ -385,12 +387,25 @@
         }
 
         function updateAllSlots() {
-            console.log("Forcing full roster UI update...");
-            for (let i = 0; i < SLOTS; i++) {
-                console.log(`Slot ${i}:`, roster[i]); // Debugging: See if roster has characters
-                updateSlot(i);
-            }
-        }
+    console.log("Forcing full roster UI update...");
+
+    const grid = document.getElementById('rosterGrid');
+
+    if (!grid) {
+        console.error("Grid element not found!");
+        return;
+    }
+
+    // Make sure roster slots are created before updating
+    if (grid.children.length === 0) {
+        console.warn("Roster slots are not initialized. Initializing now...");
+        initializeRoster();
+    }
+
+    for (let i = 0; i < SLOTS; i++) {
+        updateSlot(i);
+    }
+}
 
        async function loadRoster() {
     try {
