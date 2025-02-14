@@ -303,7 +303,7 @@
 
             if (name && imageUrl && description) {
                 preview.innerHTML = `
-                    <img src="${imageUrl}" alt="${name}">
+                    <img src="${imageUrl}" alt="${name} onerror="this.style.display='none'">
                     <div class="tooltip">
                         <strong>${name}:</strong> ${description}
                     </div>
@@ -320,6 +320,36 @@
             debug.innerHTML += `<br>${timestamp}: ${message}`;
             debug.scrollTop = debug.scrollHeight;
         }
+
+        function updateGrid(updatedRoster) {
+    console.log("Updating grid with roster:", updatedRoster);
+    const grid = document.getElementById('rosterGrid');
+
+    if (!grid) {
+        console.error("Grid element not found!");
+        return;
+    }
+
+    grid.innerHTML = ''; // Clear existing grid
+
+    updatedRoster.forEach((character, index) => {
+        if (character) {
+            const slot = document.createElement('div');
+            slot.className = 'roster-slot';
+            slot.dataset.index = index;
+            slot.innerHTML = `
+                <img src="${character.imageUrl}" alt="${character.name}">
+                <div class="tooltip">
+                    <strong>${character.name}:</strong> ${character.description}
+                </div>
+            `;
+            grid.appendChild(slot);
+        }
+    });
+
+    console.log("Grid updated!");
+}
+
 
         ['characterName', 'imageUrl', 'description'].forEach(id => {
             document.getElementById(id).addEventListener('input', updatePreview);
