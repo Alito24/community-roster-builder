@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Roster Builder</title>
+    <style>
+        /* Previous styles remain the same, removing the notice styling */
+        body {
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background-image: url('bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .roster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 151px);
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .roster-slot {
+            width: 151px;
+            height: 201px;
+            border: 1px solid #444;
+            background: #000000;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .roster-slot img {
+            width: 150px;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            filter: brightness(0.5);
+        }
+
+        .roster-slot:hover {
+            border-color: #888;
+        }
+
+        .roster-slot img:hover {
+            border-color: #888;
+            filter: brightness(1);
+        }
+
+        .tooltip {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            width: 250px;
+            background-color: #00001d;
+            text-align: left;
+            padding: 10px;
+            border-style: groove;
+            border-radius: 1px;
+            border-color: white;
+            font-size: 14px;
+            line-height: 1.4;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .roster-slot:hover .tooltip {
+            display: block;
+        }
+
+        input, textarea {
+            display: block;
+            width: 30%;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #5a5a5a;
+        }
+
+        #debug {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .pagination {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .pagination button {
+            margin: 0 5px;
+            padding: 5px 15px;
+            font-size: 18px;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <input type="text" id="characterName" placeholder="Character Name">
+            <input type="text" id="imageUrl" placeholder="Image URL (150x200)">
+            <textarea id="description" placeholder="Character Description"></textarea>
+            <button onclick="addCharacter()">Add Character</button>
+            <div id="preview-slot" class="roster-slot" style="display: none;"></div>
+        </div>
+
+        <div class="roster-grid" id="rosterGrid"></div>
+        <div class="pagination">
+            <button id="firstPage" onclick="changePage(0)">⟪</button>
+            <button id="prevPage" onclick="changePage(currentPage - 1)">←</button>
+            <button id="nextPage" onclick="changePage(currentPage + 1)">→</button>
+            <button id="lastPage" onclick="changePage(Math.ceil(roster.length / SLOTS_PER_PAGE) - 1)">⟫</button>
+        </div>
+        
+        <div id="debug">Debug info will appear here</div>
+    </div>
+
+    <script>
+        const hoverSound = new Audio('click2.mp3');  // Prepare sound file
+        const SLOTS = 50;
+        const roster = Array(SLOTS).fill(null);
+        const debug = document.getElementById('debug');
+
+        function initializeRoster() {
+            const grid = document.getElementById('rosterGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < SLOTS; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'roster-slot';
+                slot.dataset.index = i;
+                slot.addEventListener('mousemove', handleTooltipPosition);
+                grid.appendChild(slot);
+            }
+            updateDebug("Roster initialized with " + SLOTS + " empty slots");
+        }
+
+        function initializeSlot(slot) {
+            slot.addEventListener('mouseenter', () => {
+                if (roster[slot.dataset.index]) {  // Only play for filled slots
+                    hoverSound.currentTime = 0;  // Reset sound
+                    hoverSound.play();
+                }
+            });
+        }
+
+        function handleTooltipPosition(e) {
+            const tooltip = e.currentTarget.querySelector('.tooltip');
+            if (tooltip) {
+                const padding = 10;
+                tooltip.style.left = `${e.clientX + padding}px`;
+                tooltip.style.top = `${e.clientY + padding}px`;
+                
+                const rect = tooltip.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                if (rect.right > viewportWidth) {
+                    tooltip.style.left = `${e.clientX - rect.width - padding}px`;
+                }
+                if (rect.bottom > viewportHeight) {
+                    tooltip.style.top = `${e.clientY - rect.height - padding}px`;
+                }
+            }
+        }
+
+        async function addCharacter() {
+    try {
+        const name = document.getElementById('characterName').value;
+        const imageUrl = document.getElementById('imageUrl').value;
+        const description = document.getElementById('description').value;
+
+        updateDebug(`Attempting to add character: ${name}`);
+
+        if (!name || !imageUrl || !description) {
+            updateDebug("Error: Missing required fields");
+            alert('Please fill in all fields');
+            return;
+        }
+
+        // Check if roster array exists and is valid
+        if (!Array.isArray(roster)) {
+            updateDebug("Error: Roster array is invalid");
+            console.error("Roster is not an array:", roster);
+            return;
+        }
+
+        const index = roster.findIndex(slot => slot === null);
+        updateDebug(`Found empty slot at index: ${index}`);
+
+        if (index === -1) {
+            updateDebug("Error: No empty slots available");
+            alert('Roster is full!');
+            return;
+        }
+
+        updateDebug("Loading image...");
+        
+        // Create new character immediately
+        const character = {
+            name,
+            imageUrl,
+            description
+        };
+
+        const response = await fetch(`${API_URL}/characters`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(character)
+        });
+
+        if (response.ok) {
+            roster[index] = character;
+            updateSlot(index);
+            // Clear inputs
+            document.getElementById('characterName').value = '';
+            document.getElementById('imageUrl').value = '';
+            document.getElementById('description').value = '';
+        }
+    } catch (error) {
+        console.error('Error adding character:', error);
+    }
+}
+
+        function updateSlot(index) {
+            const slot = document.querySelector(`[data-index="${index}"]`);
+            updateDebug(`Updating slot ${index}`);
+            
+            if (roster[index]) {
+                const character = roster[index];
+                const tooltipId = `tooltip-${index}`;
+                slot.innerHTML = `
+                    <img 
+                        src="${character.imageUrl}" 
+                        alt="${character.name}"
+                    >
+                    <div class="tooltip" id="${tooltipId}">
+                        <strong>${character.name}:</strong> ${character.description}
+                    </div>
+                `;
+                updateDebug(`Slot ${index} updated with character ${character.name}`);
+            } else {
+                slot.innerHTML = '';
+                updateDebug(`Slot ${index} cleared`);
+            }
+        }
+
+        function updatePreview() {
+            const name = document.getElementById('characterName').value;
+            const imageUrl = document.getElementById('imageUrl').value;
+            const description = document.getElementById('description').value;
+            const preview = document.getElementById('preview-slot');
+
+            if (name && imageUrl && description) {
+                preview.innerHTML = `
+                    <img src="${imageUrl}" alt="${name}">
+                    <div class="tooltip">
+                        <strong>${name}:</strong> ${description}
+                    </div>
+                `;
+                preview.style.display = 'block';
+            } else {
+                preview.innerHTML = '';
+                preview.style.display = 'none';
+            }
+        }
+
+        function updateDebug(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debug.innerHTML += `<br>${timestamp}: ${message}`;
+            debug.scrollTop = debug.scrollHeight;
+        }
+
+        ['characterName', 'imageUrl', 'description'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updatePreview);
+        });
+
+        const SLOTS_PER_PAGE = 50;
+        let currentPage = 0;
+
+        function updatePagination() {
+            const totalPages = Math.ceil((roster.filter(slot => slot !== null).length + 1) / SLOTS_PER_PAGE);
+            const startIdx = currentPage * SLOTS_PER_PAGE;
+            const endIdx = startIdx + SLOTS_PER_PAGE;
+    
+            // Update grid with current page's slots
+            updateGrid(roster.slice(startIdx, endIdx));
+    
+            // Update pagination buttons state
+            document.getElementById('firstPage').disabled = currentPage === 0;
+            document.getElementById('prevPage').disabled = currentPage === 0;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages - 1;
+            document.getElementById('lastPage').disabled = currentPage >= totalPages - 1;
+        }
+
+        function changePage(newPage) {
+            currentPage = newPage;
+            updatePagination();
+        }
+
+        function saveRoster() {
+            localStorage.setItem('ucnRoster', JSON.stringify(roster));
+        }
+
+        async function loadRoster() {
+            try {
+                const response = await fetch(`${API_URL}/characters`);
+                const characters = await response.json();
+                roster = Array(SLOTS).fill(null);
+                characters.forEach((char, index) => {
+                    if (index < SLOTS) roster[index] = char;
+                });
+                updatePagination();
+            } catch (error) {
+                console.error('Error loading roster:', error);
+            }
+        }
+
+        // Initialize on page load
+        initializeRoster();
+    </script>
+</body>
+</html>
