@@ -264,6 +264,8 @@
             document.getElementById('characterName').value = '';
             document.getElementById('imageUrl').value = '';
             document.getElementById('description').value = '';
+
+            updatePagination();
         }
     } catch (error) {
         console.error('Error adding character:', error);
